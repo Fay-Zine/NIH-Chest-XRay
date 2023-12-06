@@ -13,13 +13,14 @@ import matplotlib.pyplot as plt
 from torchvision.models import resnet18 as torchvision_resnet18
 import torch.nn.functional as F
 import wandb
-from sklearn.metrics import roc_curve, auc
+from sklearn.metrics import roc_curve, auc, confusion_matrix
 from sklearn.preprocessing import label_binarize
 from sklearn.calibration import calibration_curve
 from sklearn.linear_model import LinearRegression
 from sklearn.utils import resample
 import seaborn as sns
 from torchviz import make_dot
+from sklearn.metrics import precision_score, recall_score, f1_score
 
 def get_xy(set):
 
@@ -413,4 +414,82 @@ def visualize_model_architecture(model, input_shape):
     dot = make_dot(output, params=dict(model.named_parameters()))
 
     # Save or display the visualization
-    dot.render('network_architecture', format='png')
+    dot.render('results/network_architecture', format='png')
+
+def calculate_specificity_npv(y_true, y_pred_probs, threshold):
+    
+    y_pred_thresholded = (y_pred_probs >= threshold).astype(int)
+    
+    # Calculate confusion matrix
+    tn, fp, fn, tp = confusion_matrix(y_true, y_pred_thresholded).ravel()
+    
+    # Calculate specificity and NPV
+    specificity = tn / (tn + fp) if (tn + fp) > 0 else 0
+    npv = tn / (tn + fn) if (tn + fn) > 0 else 0
+    
+    return specificity, npv
+
+def find_optimal_cutoff(y_true, y_pred_probs):
+    n_classes = y_pred_probs.shape[1]
+    optimal_thresholds = []
+    specificities = []
+    npvs = []
+
+    for i in range(n_classes):
+        # Compute ROC curve for each class
+        fpr, tpr, thresholds = roc_curve((y_true == i).astype(int), y_pred_probs[:, i])
+        
+        # Youden
+        J = tpr - fpr
+        optimal_idx = np.argmax(J)
+        optimal_threshold = thresholds[optimal_idx]
+
+        # Store the results
+        optimal_thresholds.append(optimal_threshold)
+
+    return optimal_thresholds
+
+
+def plot_confusion_matrix(cm, class_names):
+    plt.figure(figsize=(10, 7))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=class_names, yticklabels=class_names)
+    plt.ylabel('Vraie classe')
+    plt.xlabel('Prediction')
+    plt.title('Matrice de confusion')
+    plt.show()
+
+def get_predictions_from_probabilities(probs, thresholds):
+    pred_labels = np.zeros(probs.shape[0], dtype=int)
+    for i in range(probs.shape[1]):
+        class_indices = probs[:, i] >= thresholds[i]
+        pred_labels[class_indices] = i
+    return pred_labels
+
+
+def calculate_metrics(cm):
+    
+    metrics_df = pd.DataFrame(columns=['Class', 'PPV', 'NPV', 'Sensitivity', 'Specificity', 'F1 Score'])
+
+    # Calculate the metrics for each class
+    for i in range(cm.shape[0]):
+        TP = cm[i, i]
+        FP = cm[:, i].sum() - TP
+        FN = cm[i, :].sum() - TP
+        TN = cm.sum() - (TP + FP + FN)
+        
+        # PPV
+        PPV = TP / (TP + FP) if (TP + FP) > 0 else 0
+        # NPV
+        NPV = TN / (TN + FN) if (TN + FN) > 0 else 0
+        # Sensitivity
+        Sensitivity = TP / (TP + FN) if (TP + FN) > 0 else 0
+        # Specificity
+        Specificity = TN / (TN + FP) if (TN + FP) > 0 else 0
+        # F1
+        F1 = 2 * (PPV * Sensitivity) / (PPV + Sensitivity) if (PPV + Sensitivity) > 0 else 0
+        
+        # Append to the DataFrame
+        metrics_df.loc[i] = [i, PPV, NPV, Sensitivity, Specificity, F1]
+    
+    
+    return metrics_df

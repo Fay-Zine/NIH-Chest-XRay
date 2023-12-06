@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 import pandas as pd
 import wandb
 import random
-from sklearn.metrics import classification_report
+from sklearn.metrics import classification_report, confusion_matrix
 
 
 # Function to train and evaluate the model
@@ -120,6 +120,7 @@ def evaluate_model(run_name):
         config = {key: value["values"][0] if key != 'classes' else value["values"] for key, value in config.items()}
 
     # Load the best model
+    print("Loading model...")
     filename = config["model"]
     path = f"models/{run_name}_{filename}.pt"
 
@@ -139,23 +140,39 @@ def evaluate_model(run_name):
     if len(true_labels.shape) > 1:  # Check if labels are one-hot encoded
         true_labels = torch.max(true_labels, 1)[1]  # Convert to class indices
 
+    print("Evaluating model...")
     pred_probs = process_images(model, test_loader)
     pred_probs = np.array(pred_probs)
 
-    # model architecture
-    visualize_model_architecture(model, input_shape=(1, 1, 224, 224))
-
-    # Generate report
-    pred_labels = np.argmax(pred_probs, axis=1)  # Convert probabilities to class labels
-    report = classification_report(true_labels.numpy(), pred_labels, target_names=config['classes'])
-    print(report)
-
     # Plot ROC curves
+    print("Plotting curves...")
     plot_roc_curves(true_labels.numpy(), pred_probs, config['classes'])
     plot_precision_recall_curves(true_labels.numpy(), pred_probs, config['classes'])
     plot_calibration_curves_with_bootstrap(true_labels.numpy(), pred_probs, config['classes'])
 
-    return report
+    # Optimal threshold
+    print("Calculating optimal threshold...")
+    optimal_thresholds = find_optimal_cutoff(true_labels.numpy(), pred_probs)
+    print(f'Optimal thresholds: {optimal_thresholds}')
+
+    # Calculate the predicted labels using the optimal thresholds
+    pred_labels_optimal = (pred_probs >= optimal_thresholds).astype(int)
+
+    # Calculate the confusion matrix
+    print("Calculating confusion matrix...")
+    pred_labels_optimal = get_predictions_from_probabilities(pred_probs, optimal_thresholds)
+    cm = confusion_matrix(true_labels.numpy(), pred_labels_optimal)
+    plot_confusion_matrix(cm, class_names=config['classes'])
+
+    # Calculate the classification report
+    print("Calculating classification report...")
+    metrics_df = calculate_metrics(cm)
+    metrics_df.to_csv('results/classification_metrics.csv', index=False)
+
+    # model architecture
+    print("Visualizing model architecture...")
+    visualize_model_architecture(model, input_shape=(1, 1, 224, 224))
+    return
 
 
 ####################
