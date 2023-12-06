@@ -1,0 +1,20 @@
+parameters:
+  model:
+    values: ['heavynet']
+  lr:
+    values: [0.0003771]
+  batch_size:
+    values: [32]
+  dropout:
+    values: [0.2]
+  kernel_size:
+    values: [3]
+  stride_size:
+    values: [1]
+  random_seed:
+    values: [42]
+  classes:
+    values:
+      - 'Pneumonie'
+      - 'Oedème'
+      - 'Pneumonie et Oedème'

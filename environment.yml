@@ -1,0 +1,28 @@
+name: NIH_XRAY
+dependencies:
+  - numpy
+  - pandas
+  - jupyterlab
+  - python=3.11
+  - pip
+  - pillow 
+  - pip:
+    - lime
+    - matplotlib  
+    - nltk         
+    - numpy       
+    - pandas       
+    - scikit-learn 
+    - seaborn
+    - torch
+    - datasets
+    - torchdata
+    - torchvision
+    - accelerate
+    - wandb
+    - torchviz
+
+# conda env create -f environment.yml
+# conda activate NIH_XRAY
+# conda remove --name NIH_XRAY --all
+# conda deactivate

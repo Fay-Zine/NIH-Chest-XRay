@@ -1,0 +1,22 @@
+method: bayes
+metric:
+  name: val_loss
+  goal: minimize
+parameters:
+  model:
+    values: ['heavynet']
+  lr:
+    min: 0.0001
+    max: 0.01
+  batch_size:
+    values: [32]
+  dropout:
+    values: [0.2]
+  kernel_size:
+    values: [3, 5]
+  stride_size:
+    values: [1]
+  random_seed:
+    values: [42]
+  num_epochs:
+    values: [5, 10]
