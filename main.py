@@ -162,22 +162,22 @@ def evaluate_model(run_name):
 # Main hyperparameter tuning loop
 ####################
 
-# # Load config file
-# with open("params.yaml") as f:
-#     sweep_config = yaml.safe_load(f)
+# Load config file
+with open("params.yaml") as f:
+    sweep_config = yaml.safe_load(f)
 
-# # Initialize the sweep
-# print("Initializing sweep")
-# sweep_id = wandb.sweep(sweep_config, project="MMD6020 NIH Chest X-Ray")
+# Initialize the sweep
+print("Initializing sweep")
+sweep_id = wandb.sweep(sweep_config, project="MMD6020 NIH Chest X-Ray")
 
-# # Start the sweep
-# print("Starting sweep")
-# wandb.agent(sweep_id, train)
+# Start the sweep
+print("Starting sweep")
+wandb.agent(sweep_id, train)
 
 ####################
 # Evaluate model
 ####################
 
-#load saved model from .pt file
-run_name='stellar-sweep-3'
-evaluate_model(run_name)
+# #load saved model from .pt file
+# run_name='stellar-sweep-3'
+# evaluate_model(run_name)
